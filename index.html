@@ -201,9 +201,11 @@ textarea.fld:focus{border-color:var(--sep-2);background:var(--surface);outline:n
 
 /* readiness ring */
 .ring-card{display:flex;align-items:center;gap:22px}
-.ring{--p:0;width:112px;height:112px;flex:none;border-radius:50%;display:grid;place-items:center;
+@property --p{syntax:'<number>';inherits:false;initial-value:0}
+.ring{--p:0;width:112px;height:112px;flex:none;border-radius:50%;position:relative;display:grid;place-items:center;
   background:conic-gradient(var(--ring,var(--green)) calc(var(--p)*1%),var(--surface-3) 0);transition:--p .9s var(--e-out),background .4s}
-.ring::before{content:"";position:absolute;width:88px;height:88px;border-radius:50%;background:var(--surface)}
+.ring::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:88px;height:88px;border-radius:50%;background:var(--surface)}
+.ring .rv{position:relative;z-index:1}
 .ring .rv{position:relative;text-align:center}
 .ring .rv b{font-size:30px;font-weight:680;letter-spacing:-.04em;font-variant-numeric:tabular-nums;display:block;line-height:1}
 .ring .rv span{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3)}
