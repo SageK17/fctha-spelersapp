@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#000000" />
 <title>FC THA · Spelersapp</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FC THA">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
@@ -562,7 +569,7 @@ const ICONS={
   wellness:'<path d="M12 20.3C12 20.3 3.8 15 3.8 9 3.8 6.4 5.9 4.5 8.4 4.5c1.6 0 2.9.8 3.6 2 .7-1.2 2-2 3.6-2C18.1 4.5 20.2 6.4 20.2 9c0 6-8.2 11.3-8.2 11.3Z"/>',
   srpe:'<path d="M5.5 18a9 9 0 1 1 13 0"/><path d="M12 13l3.5-2.5"/><circle cx="12" cy="13" r="1.1" fill="currentColor" stroke="none"/>',
   training:'<path d="M3 13h3.5l2-6 3.5 12 2.5-7H21"/>',
-  wedstrijd:'<circle cx="12" cy="12" r="8.4"/><path d="M12 7.6l3.1 2.3-1.2 3.7h-3.8L8.9 9.9z"/><path d="M9 16.6l1.4-1m4.6 1-1.4-1M12 4v1.8"/>',
+  wedstrijd:'<circle cx="12" cy="12" r="9"/><path d="M12 9.4 14.47 11.2 13.53 14.1 10.47 14.1 9.53 11.2Z"/><path d="M12 9.4 12 6.4M14.47 11.2 17.3 10.2M13.53 14.1 15.3 16.6M10.47 14.1 8.7 16.6M9.53 11.2 6.7 10.2"/>',
   lg:'<path d="M12 4v16M7 20h10M5 8h14"/><path d="M5 8 2.7 13a3 3 0 0 0 4.6 0L5 8Zm14 0-2.3 5a3 3 0 0 0 4.6 0L19 8Z"/>',
   testdata:'<path d="M4 20h16"/><path d="M6.5 20v-8M12 20V5M17.5 20v-6"/>',
   pop:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.6"/><circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none"/>',
@@ -602,7 +609,8 @@ const ICONS={
   doc:'<path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z"/><path d="M14 3.5V8h4"/>',
   users:'<circle cx="9" cy="9" r="3.2"/><path d="M3.6 19a5.4 5.4 0 0 1 10.8 0"/><path d="M16 6.4a3 3 0 0 1 0 5.7M20.4 19a5 5 0 0 0-3.6-4.8"/>',
   pie:'<path d="M12 3.6v8.4h8.4A8.4 8.4 0 1 0 12 3.6z"/><path d="M14.6 4A8.4 8.4 0 0 1 20 9.4h-5.4z"/>',
-  table:'<rect x="3.6" y="5" width="16.8" height="14" rx="2"/><path d="M3.6 10h16.8M3.6 14.5h16.8M9 5v14M15 5v14"/>'
+  table:'<rect x="3.6" y="5" width="16.8" height="14" rx="2"/><path d="M3.6 10h16.8M3.6 14.5h16.8M9 5v14M15 5v14"/>',
+  install:'<rect x="6" y="3" width="12" height="18" rx="2.6"/><path d="M12 7.5v6.2m0 0 2.5-2.5M12 13.7 9.5 11.2M10 18.2h4"/>'
 };
 function ico(name,cls=''){return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
 function hydrateIcons(root=document){$$('[data-i]',root).forEach(el=>{el.outerHTML=ico(el.dataset.i);});}
@@ -774,15 +782,22 @@ const App={
   openMore(){
     const rows=ks=>ks.map(k=>{const n=SEC[k];return `<button class="srow" data-k="${k}"><span class="srow-ic" style="--c:${n.c}">${ico(n.i)}</span><span class="srow-l">${n.l}</span>${ico(n.ext?'ext':'chevright')}</button>`;}).join('');
     const html=`<div class="sheet-head"><b>Alle onderdelen</b><button class="icon-btn" id="sheetX" aria-label="Sluiten">${ico('x')}</button></div>`
-      +MORE_GROUPS.map(([t,ks])=>`<div class="sgrp"><div class="sgrp-t">${t}</div><div class="sgrp-c">${rows(ks)}</div></div>`).join('');
+      +MORE_GROUPS.map(([t,ks])=>`<div class="sgrp"><div class="sgrp-t">${t}</div><div class="sgrp-c">${rows(ks)}</div></div>`).join('')
+      +`<div class="sgrp"><div class="sgrp-c"><button class="srow" id="sheetInstall"><span class="srow-ic" style="--c:#34c759">${ico('install')}</span><span class="srow-l">Installeer app<span class="srow-sub">Zet op je beginscherm</span></span>${ico('chevright')}</button></div></div>`;
     this.sheet(html);
     $('#sheetX').onclick=()=>this.closeSheet();
-    $$('.srow',$('#sheetbg')).forEach(b=>b.onclick=()=>{this.closeSheet();this.go(b.dataset.k);});
+    $$('.srow[data-k]',$('#sheetbg')).forEach(b=>b.onclick=()=>{this.closeSheet();this.go(b.dataset.k);});
+    $('#sheetInstall').onclick=()=>{this.closeSheet();this.install();};
   },
   sheet(html){this.closeSheet();const bg=document.createElement('div');bg.className='sheet-bg';bg.id='sheetbg';
     bg.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Meer onderdelen">${html}</div>`;
     bg.onclick=e=>{if(e.target===bg)this.closeSheet();};document.body.appendChild(bg);},
   closeSheet(){const s=$('#sheetbg');if(s)s.remove();},
+  async install(){
+    if(window.deferredPrompt){window.deferredPrompt.prompt();let out='dismissed';try{out=(await window.deferredPrompt.userChoice).outcome;}catch(e){}window.deferredPrompt=null;this.toast(out==='accepted'?ico('check')+' App geïnstalleerd':'Installatie geannuleerd');return;}
+    if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone){this.toast(ico('check')+' De app staat al op je beginscherm');return;}
+    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    this.toast(ios?'Tik op het deel-icoon ⎙ en kies "Zet op beginscherm"':'Open je browsermenu en kies "App installeren"');},
   refreshStreak(){$('#streakN').textContent=Store.get('streak',5);},
   bumpStreak(){const t=iso(TODAY);if(Store.get('lastComplete')===t)return Store.get('streak',5);
     const s=Store.get('streak',5)+1;Store.set('streak',s);Store.set('lastComplete',t);this.refreshStreak();return s;},
@@ -1290,6 +1305,9 @@ VIEWS.export={
 };
 
 /* ============================ BOOT ============================ */
+window.deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.deferredPrompt=e;});
+if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>App.init(),{once:true});else App.init();
 </script>
 </body>
