@@ -76,6 +76,8 @@ input,textarea,select{font-family:inherit}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:20px;border:3px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.26);background-clip:content-box}
 .ic{width:1.25em;height:1.25em;flex:none;vertical-align:-.18em}
+.emo{display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:1.15em;line-height:1;vertical-align:-.16em;font-style:normal}
+.nav-ic .emo{font-size:15px}.sec-ic .emo{font-size:22px}.ov-ic .emo{font-size:21px}.srow-ic .emo{font-size:17px}.notif-ic .emo{font-size:18px}.ric .emo{font-size:19px}.fcard .fic .emo{font-size:22px}.tab .emo{font-size:22px}.seg-btn .emo{font-size:1.05em}
 
 /* ===== LAYOUT ===== */
 #app{display:grid;grid-template-columns:var(--sb) 1fr;height:100dvh;background:var(--bg)}
@@ -612,7 +614,8 @@ const ICONS={
   table:'<rect x="3.6" y="5" width="16.8" height="14" rx="2"/><path d="M3.6 10h16.8M3.6 14.5h16.8M9 5v14M15 5v14"/>',
   install:'<rect x="6" y="3" width="12" height="18" rx="2.6"/><path d="M12 7.5v6.2m0 0 2.5-2.5M12 13.7 9.5 11.2M10 18.2h4"/>'
 };
-function ico(name,cls=''){return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
+const EMOJI={wedstrijd:'⚽'};
+function ico(name,cls=''){if(EMOJI[name])return `<span class="emo ${cls}" aria-hidden="true">${EMOJI[name]}</span>`;return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
 function hydrateIcons(root=document){$$('[data-i]',root).forEach(el=>{el.outerHTML=ico(el.dataset.i);});}
 
 /* ---- store ---- */

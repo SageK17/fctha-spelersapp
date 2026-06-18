@@ -1,5 +1,5 @@
 /* FC THA Spelersapp — service worker (offline cache + notifications) */
-const CACHE = 'fctha-v1';
+const CACHE = 'fctha-v2';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-180.png',
@@ -20,16 +20,30 @@ self.addEventListener('activate', e => {
   );
 });
 
-/* cache-first, fall back to network, then to the app shell */
+/* HTML = network-first (updates always propagate); other assets = stale-while-revalidate */
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  if (isHTML) {
+    e.respondWith(
+      fetch(req).then(resp => {
+        const copy = resp.clone();
+        caches.open(CACHE).then(c => c.put('./index.html', copy)).catch(() => {});
+        return resp;
+      }).catch(() => caches.match(req).then(m => m || caches.match('./index.html')))
+    );
+    return;
+  }
   e.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(resp => {
-      const copy = resp.clone();
-      caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
-      return resp;
-    }).catch(() => caches.match('./index.html')))
+    caches.match(req).then(hit => {
+      const net = fetch(req).then(resp => {
+        const copy = resp.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        return resp;
+      }).catch(() => hit);
+      return hit || net;
+    })
   );
 });
 
