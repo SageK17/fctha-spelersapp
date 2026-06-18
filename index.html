@@ -505,6 +505,14 @@ select.fld:focus,input.fld:focus{border-color:var(--sep-2);outline:none}
   .launch{padding:40px 18px}
 }
 .ovc-wide{}
+.rdy-bar{display:none}
+@media(max-width:860px){
+  .rdy-bar{display:flex;align-items:center;gap:10px;position:sticky;top:6px;z-index:40;margin:0 0 14px;padding:10px 15px;border-radius:13px;
+    background:rgba(22,22,24,.94);backdrop-filter:saturate(180%) blur(14px);border:1px solid var(--sep-2);box-shadow:0 8px 22px -10px rgba(0,0,0,.7)}
+  .rdy-bar .rdy-dot{width:10px;height:10px;border-radius:50%;background:var(--ink-4);flex:none;transition:background .3s}
+  .rdy-bar b{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;min-width:26px}
+  .rdy-bar .rdy-t{font-size:13px;color:var(--ink-2);font-weight:500}
+}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
 </style>
@@ -715,7 +723,6 @@ const PLAYER={name:'Daan Visser',first:'Daan',team:'O21',initials:'DV'};
 const NOTIF=[
   {id:'n1',k:'wedstrijd',title:'Wedstrijd zaterdag · 10:00',body:'Thuis tegen Ajax O21 op Sportpark FC THA.',t:'2 u'},
   {id:'n2',k:'evaluatie',title:'Nieuwe evaluatie opengesteld',body:'Je beoordeling van 22 apr staat klaar om te bekijken.',t:'5 u'},
-  {id:'n3',k:'srpe',title:'Vul je sRPE in',body:'Je hebt je laatste sessie nog niet beoordeeld.',t:'1 d'},
   {id:'n4',k:'acafit',title:'Nieuw krachtprogramma',body:'B1W2 · Maximale kracht is toegevoegd aan je AcaFit.',t:'2 d'},
   {id:'n5',k:'wellness',title:'5 dagen op rij',body:'Sterke routine — houd je wellness-streak vast.',t:'2 d'}
 ];
@@ -730,7 +737,7 @@ const App={
     $('#avatar').textContent=PLAYER.initials;$('#who-nm').textContent=PLAYER.first;$('#who-tm').textContent='Team '+PLAYER.team;
     $('#dateTxt').textContent=nlDate(TODAY);
     $('#signout').onclick=()=>App.toast(ico('logout')+' Demo — je blijft ingelogd');
-    this.renderNav();hydrateIcons();this.refreshStreak();this.renderBadge();
+    this.renderNav();hydrateIcons();this.refreshStreak();this.renderBadge();Remind.start();
     $('#bell').onclick=e=>{e.stopPropagation();this.toggleBell();};
     // single global outside-click for any open dropdown
     document.addEventListener('click',e=>{if(!e.target.closest('.ms'))$$('.ms-list').forEach(l=>l.hidden=true);
@@ -753,7 +760,7 @@ const App={
     const v=VIEWS[k];const view=$('#view');view.scrollTop=0;
     view.innerHTML=`<div class="panel view-enter">${v.render()}</div>`;
     if(push&&location.hash!=='#'+k)history.replaceState(null,'','#'+k);
-    if(v.init)requestAnimationFrame(()=>v.init());
+    if(v.init)try{v.init();}catch(e){console.error('view init',k,e);}
   },
   head(title,sub){const s=SEC[this.cur]||{};return `<div class="sec-head"><div class="sec-titlewrap"><span class="sec-ic" style="--c:${s.c||'#ff453a'}">${ico(s.i||'home')}</span><h1 class="sec-title">${title}</h1></div>${sub?`<p class="sec-sub">${sub}</p>`:''}</div>`;},
   toast(html){let t=$('#toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';t.setAttribute('role','status');t.setAttribute('aria-live','polite');document.body.appendChild(t);}
@@ -783,23 +790,24 @@ const App={
     <div class="num">${s}</div><div class="numlab">${s===1?'dag':'dagen'} op rij</div>
     <button class="btn btn-primary btn-block" onclick="App.closeModal()">Lekker bezig</button>`);},
   /* ---- notifications ---- */
-  unread(){const r=Store.get('notifRead',[]);return NOTIF.filter(n=>!r.includes(n.id)).length;},
+  unread(){const r=Store.get('notifRead',[]);return reminders().length+NOTIF.filter(n=>!r.includes(n.id)).length;},
   renderBadge(){const b=$('#bellBadge');if(!b)return;const u=this.unread();if(u>0){b.textContent=u;b.hidden=false;}else b.hidden=true;},
   toggleBell(force){const p=$('#notifPanel');if(!p)return;const open=force!=null?force:p.hidden;p.hidden=!open;$('#bell').setAttribute('aria-expanded',String(open));if(open)this.renderNotif();},
   renderNotif(){const r=Store.get('notifRead',[]);const p=$('#notifPanel');const pushOn='Notification'in window&&Notification.permission==='granted';
+    const items=[...reminders(),...NOTIF.map(n=>({...n,read:r.includes(n.id)}))];
     p.innerHTML=`<div class="notif-h"><b>Meldingen</b><button class="linkbtn" id="nAll">Alles gelezen</button></div>
-    <div class="notif-list">${NOTIF.map(n=>{const s=SEC[n.k]||{};const un=!r.includes(n.id);
-      return `<button class="notif ${un?'unread':''}" data-id="${n.id}" data-k="${n.k}"><span class="notif-ic" style="--c:${s.c}">${ico(s.i||'bell')}</span><span class="notif-tx"><span class="nt">${esc(n.title)}</span><span class="nb">${esc(n.body)}</span></span><span class="ntime">${esc(n.t)}</span></button>`;}).join('')}</div>
+    <div class="notif-list">${items.map(n=>{const s=SEC[n.k]||{};const un=n.rem?true:!n.read;
+      return `<button class="notif ${un?'unread':''}" data-id="${n.id}" data-k="${n.k}" data-rem="${n.rem?1:''}"><span class="notif-ic" style="--c:${s.c}">${ico(s.i||'bell')}</span><span class="notif-tx"><span class="nt">${esc(n.title)}</span><span class="nb">${esc(n.body)}</span></span><span class="ntime">${esc(n.t)}</span></button>`;}).join('')}</div>
     <div class="notif-f"><button class="linkbtn" id="nPush">${ico('bell')} ${pushOn?'Stuur een testmelding':'Pushmeldingen aanzetten'}</button></div>`;
     $('#nAll').onclick=()=>{Store.set('notifRead',NOTIF.map(n=>n.id));this.renderBadge();this.renderNotif();};
     $('#nPush').onclick=()=>this.enablePush();
-    $$('.notif',p).forEach(b=>b.onclick=()=>{const id=b.dataset.id;const rr=Store.get('notifRead',[]);if(!rr.includes(id)){rr.push(id);Store.set('notifRead',rr);}this.renderBadge();this.toggleBell(false);this.go(b.dataset.k);});},
+    $$('.notif',p).forEach(b=>b.onclick=()=>{if(!b.dataset.rem){const rr=Store.get('notifRead',[]);const id=b.dataset.id;if(!rr.includes(id)){rr.push(id);Store.set('notifRead',rr);}}this.renderBadge();this.toggleBell(false);this.go(b.dataset.k);});},
   async enablePush(){
     if(!('Notification'in window)){this.toast('Pushmeldingen worden hier niet ondersteund');return;}
     let perm=Notification.permission;
     if(perm==='default'){try{perm=await Notification.requestPermission();}catch(e){}}
-    if(perm==='granted'){try{new Notification('FC THA Spelersapp',{body:'Klaar voor zaterdag — wedstrijd om 10:00 tegen Ajax O21.'});}catch(e){}this.toast(ico('check')+' Melding verstuurd');this.renderNotif();}
-    else this.toast('Pushmeldingen geblokkeerd — sta ze toe in je browser');}
+    if(perm==='granted'){try{new Notification('Herinneringen staan aan',{body:'Je krijgt een melding voor je wellness (vóór 08:30) en je sRPE (na de veldtraining).'});}catch(e){}this.toast(ico('check')+' Herinneringen ingeschakeld');Remind.check();this.renderBadge();const np=$('#notifPanel');if(np&&!np.hidden)this.renderNotif();}
+    else this.toast('Pushmeldingen geblokkeerd — sta ze toe in je browser-instellingen');}
 };
 function fillPct(v){return (v-1)/5*100;}
 function shuffle(a,seed){const r=mulberry(seed);const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
@@ -811,6 +819,28 @@ const Planning={forDay(d){const wd=d.getDay();
   const base=[{time:'11:30',t:'Training (T)',i:'training'},{time:'13:30',t:'Kracht (lowerbody)',i:'acafit'}];
   if(wd===2||wd===4)base.splice(1,0,{time:'12:45',t:'Fysieke ondersteuning',i:'pop'});
   return base;}};
+
+/* ---------- reminders (wellness vóór 08:30 · sRPE binnen 30 min na veldtraining) ---------- */
+const Remind={
+  _t:null,
+  wDeadline(){const d=new Date();d.setHours(8,30,0,0);return d;},
+  sDeadline(){const p=Planning.forDay(TODAY).find(x=>/training/i.test(x.t));if(!p)return null;const [h,m]=p.time.split(':').map(Number);const d=new Date();d.setHours(h,m,0,0);d.setMinutes(d.getMinutes()+90+30);return d;},
+  wDone(){const w=Store.get('wellness',{})[iso(TODAY)]||{};return ['vermoeidheid','humeur','spierpijn','slaapkwaliteit'].every(k=>clampInt(w[k],1,6)!=null);},
+  sDone(){const s=Store.get('srpe',{})[iso(TODAY)]||{};return ['spieren','conditie','mentaal'].every(k=>clampInt(s[k],1,6)!=null);},
+  _fired(k){return Store.get('reminded',{})[iso(TODAY)+':'+k]===true;},
+  _mark(k){const f=Store.get('reminded',{});f[iso(TODAY)+':'+k]=true;Store.set('reminded',f);},
+  _notify(title,body){if(!('Notification'in window)||Notification.permission!=='granted')return false;try{new Notification(title,{body,tag:title});}catch(e){return false;}return true;},
+  check(){const now=new Date();
+    if(!this.wDone()&&now>=this.wDeadline()&&!this._fired('wellness')){if(this._notify('Wellness invullen','De deadline van 08:30 is verstreken — vul je dagelijkse wellness in.'))this._mark('wellness');}
+    const sd=this.sDeadline();
+    if(sd&&!this.sDone()&&now>=sd&&!this._fired('srpe')){if(this._notify('sRPE invullen','Vul je sRPE in — uiterlijk 30 minuten na de veldtraining.'))this._mark('srpe');}
+    if(window.App&&App.renderBadge)App.renderBadge();},
+  start(){this.check();clearInterval(this._t);this._t=setInterval(()=>this.check(),60000);}
+};
+function reminders(){const out=[];
+  if(!Remind.wDone())out.push({id:'rem-wellness',k:'wellness',title:'Vul je wellness in',body:'Dagelijks vóór 08:30 invullen.',t:'vóór 08:30',rem:true});
+  if(Remind.sDeadline()&&!Remind.sDone())out.push({id:'rem-srpe',k:'srpe',title:'Vul je sRPE in',body:'Binnen 30 min na de veldtraining.',t:'na training',rem:true});
+  return out;}
 
 const VIEWS={};
 
@@ -825,20 +855,31 @@ VIEWS.overzicht={
     let sat=new Date(TODAY);while(sat.getDay()!==6)sat=addDays(sat,1);
     const satTxt=sat.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'});
     const dt=nlDate(TODAY);const dcap=dt.charAt(0).toUpperCase()+dt.slice(1);
+    const s=Store.get('srpe',{})[iso(TODAY)]||{};
+    const sv=['spieren','conditie','mentaal'].map(k=>clampInt(s[k],1,6)).filter(v=>v!=null);
+    const srpe=sv.length===3?(sv.reduce((a,b)=>a+b,0)/3/6*10).toFixed(1):null;
+    const plan=Planning.forDay(TODAY);
+    const planHTML=plan.length?plan.map(i=>`<div class="row"><div class="ric">${ico(i.i)}</div><div class="rt">${i.t}</div><div class="rr">${i.time}</div></div>`).join(''):`<div class="empty" style="padding:20px"><p>Geen sessies gepland vandaag.</p></div>`;
     return App.head('Overzicht',`${dcap} · jouw dag in één oogopslag.`)
     +`<div class="ov-hero">
       <div class="ovc tap" style="--c:#ff2d55" onclick="App.go('wellness')">
         ${rdy!=null?`<div class="ov-ring"><div class="ring" style="--p:${rdy};--ring:${rcol}"><div class="rv"><b>${rdy}</b></div></div></div>`:''}
         <div class="ov-ic">${ico('wellness')}</div><div class="ov-k">Readiness vandaag</div>
         <div class="ov-v">${rdy!=null?rdy+'<small> /100</small>':'Nog niet ingevuld'}</div></div>
-      <div class="ovc tap" style="--c:#ff9500" onclick="App.go('wellness')">
+      <div class="ovc tap" style="--c:#ff9500" onclick="App.go('srpe')">
+        <div class="ov-ic">${ico('srpe')}</div><div class="ov-k">sRPE vandaag</div>
+        <div class="ov-v">${srpe!=null?srpe+'<small> /10</small>':'Nog niet ingevuld'}</div></div>
+      <div class="ovc tap ovc-wide" style="--c:#ffcc00" onclick="App.go('wellness')">
         <div class="ov-ic">${ico('flame')}</div><div class="ov-k">Wellness-streak</div>
         <div class="ov-v">${streak}<small> ${streak===1?'dag':'dagen'} op rij</small></div></div>
-      <div class="ovc tap ovc-wide" style="--c:#34c759" onclick="App.go('wedstrijd')">
-        <div class="ov-ic">${ico('wedstrijd')}</div><div class="ov-k">Volgende wedstrijd</div>
-        <div class="ov-v" style="font-size:17px">${satTxt} · 10:00<br><span style="font-size:13.5px;color:var(--ink-2);font-weight:500">Ajax O21 · thuis</span></div></div>
     </div>
     <div class="grid cols-2" style="align-items:start">
+      <div class="card card-pad"><div class="card-h">${ico('calendar')}<h3>Planning vandaag</h3><span class="sub">${PLAYER.team}</span></div>${planHTML}</div>
+      <div class="card card-pad"><div class="card-h">${ico('wedstrijd')}<h3>Volgende wedstrijd</h3></div>
+        <div style="display:flex;align-items:center;gap:14px"><div class="ric" style="width:42px;height:42px;background:color-mix(in srgb,#34c759 22%,transparent);color:#34c759">${ico('wedstrijd')}</div>
+          <div><div style="font-size:17px;font-weight:650;letter-spacing:-.01em">${satTxt} · 10:00</div><div style="font-size:13.5px;color:var(--ink-2)">Ajax O21 · thuis</div></div></div></div>
+    </div>
+    <div class="grid cols-2" style="align-items:start;margin-top:16px">
       <div class="card card-pad"><div class="card-h">${ico('training')}<h3>Belasting deze week</h3><span class="sub">7 dagen</span></div>
         <div class="chart-box" style="height:218px"><canvas id="ovWeek" aria-label="Trainingsbelasting deze week"></canvas></div></div>
       <div class="card"><div class="card-pad" style="padding-bottom:2px"><div class="card-h">${ico('bell')}<h3>Meldingen</h3><button class="linkbtn" id="ovAll" style="margin-left:auto;margin-right:-4px">Alles</button></div></div>
@@ -855,8 +896,8 @@ VIEWS.overzicht={
   },
   init(){
     const g=DATA.gen(7);mkBar('ovWeek',g.labels,[barDS('Totale afstand (m)',g.td,'#007aff','y')],{unit:'m',shortX:true,title:'TD (m)'});
-    const r=Store.get('notifRead',[]);const list=NOTIF.slice(0,3);
-    $('#ovNotif').innerHTML=list.map(n=>{const s=SEC[n.k]||{};const un=!r.includes(n.id);
+    const r=Store.get('notifRead',[]);const list=[...reminders(),...NOTIF].slice(0,4);
+    $('#ovNotif').innerHTML=list.map(n=>{const s=SEC[n.k]||{};const un=n.rem?true:!r.includes(n.id);
       return `<button class="notif ${un?'unread':''}" data-k="${n.k}"><span class="notif-ic" style="--c:${s.c}">${ico(s.i||'bell')}</span><span class="notif-tx"><span class="nt">${esc(n.title)}</span><span class="nb">${esc(n.body)}</span></span><span class="ntime">${esc(n.t)}</span></button>`;}).join('');
     $$('#ovNotif .notif').forEach((b,i)=>b.onclick=()=>App.go(list[i].k));
     $('#ovAll').onclick=()=>App.toggleBell(true);
@@ -888,7 +929,8 @@ VIEWS.wellness={
     const order=shuffle(Object.keys(WL),20260618);
     const blocks=order.map(n=>qBlock(n,WL[n],clampInt(saved[n],1,6),false,WL[n].labels)).join('');
     return App.head('Wellness','Hoe voel je je vandaag? Eerlijk invullen helpt de staf je belasting te sturen.')
-    +`<div class="grid cols-2" style="align-items:start">
+    +`<div class="rdy-bar" id="rdyBar" aria-hidden="true"><span class="rdy-dot" id="rdyDot"></span><b id="rdyBarV">–</b><span class="rdy-t" id="rdyBarT">Readiness — vul alle vier in</span></div>
+    <div class="grid cols-2" style="align-items:start">
       <div>${blocks}
         <div class="q"><div class="q-top"><span class="qn">Opmerkingen</span></div>
           <textarea class="fld" id="wlNote" placeholder="Iets dat de staf moet weten? (optioneel)">${esc(saved.opmerkingen||'')}</textarea></div>
@@ -905,18 +947,21 @@ VIEWS.wellness={
   init(){
     const ring=$('#ring');
     function score(){const vals=Object.keys(WL).map(n=>{const el=$(`.range[name="${n}"]`);return el&&!el.classList.contains('unset')?+el.value:null;});
-      if(vals.some(v=>v==null)){ring.style.setProperty('--p',0);$('#ringV').textContent='–';$('#ringT').textContent='Nog niet ingevuld';$('#ringP').textContent='Beoordeel alle vier de vragen voor je readiness-score.';return;}
-      const sc=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length/6*100);ring.style.setProperty('--p',sc);
-      ring.style.setProperty('--ring',sc<55?'var(--accent)':sc<72?'var(--amber)':'var(--green)');$('#ringV').textContent=sc;
+      const bv=$('#rdyBarV'),bt=$('#rdyBarT'),bd=$('#rdyDot');
+      if(vals.some(v=>v==null)){ring.style.setProperty('--p',0);$('#ringV').textContent='–';$('#ringT').textContent='Nog niet ingevuld';$('#ringP').textContent='Beoordeel alle vier de vragen voor je readiness-score.';
+        if(bv){bv.textContent='–';bt.textContent='Readiness — vul alle vier in';bd.style.background='var(--ink-4)';}return;}
+      const sc=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length/6*100);const col=sc<55?'var(--accent)':sc<72?'var(--amber)':'var(--green)';ring.style.setProperty('--p',sc);
+      ring.style.setProperty('--ring',col);$('#ringV').textContent=sc;
       const t=sc<55?['Rust nodig','Je lichaam vraagt om herstel — stem af met de staf.']:sc<72?['Let op','Redelijk, maar houd je belasting in de gaten.']:['Klaar voor actie','Je bent fris. Knallen vandaag.'];
-      $('#ringT').textContent=t[0];$('#ringP').textContent=t[1];}
+      $('#ringT').textContent=t[0];$('#ringP').textContent=t[1];
+      if(bv){bv.textContent=sc;bt.textContent='Readiness · '+t[0];bd.style.background=col;}}
     $$('.range',$('#view')).forEach(r=>r.addEventListener('input',()=>{r.classList.remove('unset');const v=+r.value,n=r.name,lab=WL[n].labels[v];
       r.style.setProperty('--fill',fillPct(v)+'%');r.setAttribute('aria-valuetext',lab);
       const q=r.closest('.q');q.classList.add('done');const vd=q.querySelector('.q-val');vd.classList.remove('noval');
       vd.innerHTML=`<span class="zone" style="background:${zoneColor(v)}"></span><span class="qtext">${lab}</span>`;score();}));
     $('#wlSave').onclick=()=>{const w=Store.get('wellness',{});const day=w[iso(TODAY)]||{};let n=0;
       Object.keys(WL).forEach(name=>{const el=$(`.range[name="${name}"]`);if(el&&!el.classList.contains('unset')){day[name]=+el.value;n++;}});
-      day.opmerkingen=$('#wlNote').value.trim();w[iso(TODAY)]=day;Store.set('wellness',w);
+      day.opmerkingen=$('#wlNote').value.trim();w[iso(TODAY)]=day;Store.set('wellness',w);App.renderBadge();
       $('#wlFb').innerHTML=ico('check')+' Opgeslagen';
       if(n>=4){const s=App.bumpStreak();setTimeout(()=>App.celebrate(s),200);}else App.toast(ico('check')+' Opgeslagen — vul alle vier in voor je streak');};
     const items=Planning.forDay(TODAY);
@@ -959,7 +1004,7 @@ VIEWS.srpe={
       const q=r.closest('.q');q.classList.add('done');const vd=q.querySelector('.q-val');vd.classList.remove('noval');vd.querySelector('.qtext').textContent=lab;idx();}));
     $('#srSave').onclick=()=>{const all=Store.get('srpe',{});const day=all[iso(TODAY)]||{};
       Object.keys(SR).forEach(n=>{const el=$(`.range.sr[name="${n}"]`);if(el&&!el.classList.contains('unset'))day[n]=+el.value;});
-      day.opmerking=$('#srNote').value.trim();all[iso(TODAY)]=day;Store.set('srpe',all);
+      day.opmerking=$('#srNote').value.trim();all[iso(TODAY)]=day;Store.set('srpe',all);App.renderBadge();
       $('#srFb').innerHTML=ico('check')+' Opgeslagen';App.toast(ico('check')+' sRPE opgeslagen');};
     idx();
   }
